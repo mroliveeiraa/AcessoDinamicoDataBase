@@ -1,0 +1,175 @@
+version: '3'
+services:
+  postgres-master:
+    image: postgres:latest
+    container_name: postgres-master
+    environment:
+      POSTGRES_USER: your_master_user
+      POSTGRES_PASSWORD: your_master_password
+    ports:
+      - "5432:5432"
+    networks:
+      - mynetwork
+
+  postgres-replica:
+    image: postgres:latest
+    container_name: postgres-replica
+    environment:
+      POSTGRES_USER: your_replica_user
+      POSTGRES_PASSWORD: your_replica_password
+    ports:
+      - "5433:5432"  # Use port 5433 for replica
+    networks:
+      - mynetwork
+
+  pgpool:
+    image: sameersbn/pgpool:4
+    container_name: pgpool
+    depends_on:
+      - postgres-master
+      - postgres-replica
+    environment:
+      - POSTGRES_BACKEND_HOSTS=postgres-master:5432 postgres-replica:5432
+      - POSTGRES_USERNAME=your_app_user
+      - POSTGRES_PASSWORD=your_app_password
+    ports:
+      - "5434:5432"  # Use port 5434 for connecting to pgpool
+    networks:
+      - mynetwork
+
+networks:
+  mynetwork:
+
+
+
+
+
+
+#postgres-master é o contêiner principal que atua como seu banco de dados de gravação.
+
+#postgres-replica é o contêiner da réplica para leitura.
+
+#pgpool é o contêiner pgpool-II que atua como middleware para rotear consultas de leitura para a réplica e consultas de gravação para o mestre.
+
+#Certifique-se de substituir your_master_user, your_master_password, your_replica_user, your_replica_password, your_app_user, e your_app_password pelos valores apropriados. Você também pode personalizar as portas conforme necessário.
+
+#Este exemplo configura um ambiente onde você pode conectar seus aplicativos ao contêiner pgpool na porta 5434 para roteamento de consultas entre o mestre e a réplica de acordo com a necessidade. Certifique-se de ajustar suas configurações de aplicativo para se conectar à porta 5434 quando for realizar consultas de leitura.
+
+
+  ##############################
+
+
+
+  Para configurar sua aplicação Spring Boot para usar a instância de RDS para escrita e a instância de leitura separadamente, você pode usar o recurso de roteamento de leitura/escrita do Spring Data JPA. Aqui estão os passos gerais que você pode seguir:
+
+1. **Defina as Configurações do DataSource:**
+
+   No arquivo `application.properties` ou `application.yml`, configure as informações de conexão para ambas as instâncias do RDS, separando-as por nome, por exemplo:
+
+   ```properties
+   spring.datasource.write.url=jdbc:postgresql://hostname_write:port/database
+   spring.datasource.write.username=username
+   spring.datasource.write.password=password
+
+   spring.datasource.read.url=jdbc:postgresql://hostname_read:port/database
+   spring.datasource.read.username=username
+   spring.datasource.read.password=password
+   ```
+
+2. **Configure a Roteamento de Leitura/Escrita:**
+
+   Crie um bean de configuração que determine qual DataSource usar com base na operação (leitura ou escrita). Aqui está um exemplo de configuração usando o `AbstractRoutingDataSource`:
+
+   ```java
+   import org.springframework.jdbc.datasource.lookup.AbstractRoutingDataSource;
+
+   public class RoutingDataSource extends AbstractRoutingDataSource {
+       @Override
+       protected Object determineCurrentLookupKey() {
+           return DataSourceContextHolder.getDataSourceType();
+       }
+   }
+   ```
+
+3. **Defina um Contexto para Determinar o Tipo de Operação:**
+
+   Crie uma classe para manter o contexto de leitura/escrita. Aqui está um exemplo:
+
+   ```java
+   public class DataSourceContextHolder {
+       private static final ThreadLocal<String> contextHolder = new ThreadLocal<>();
+
+       public static void setDataSourceType(String dataSourceType) {
+           contextHolder.set(dataSourceType);
+       }
+
+       public static String getDataSourceType() {
+           return contextHolder.get();
+       }
+
+       public static void clearDataSourceType() {
+           contextHolder.remove();
+       }
+   }
+   ```
+
+4. **Anote seus Métodos de Repositório:**
+
+   Anote os métodos de seus repositórios Spring Data JPA com a anotação `@Transactional` e especifique o tipo de operação (leitura ou escrita) que cada método realiza. Por exemplo:
+
+   ```java
+   @Repository
+   public interface UserRepository extends JpaRepository<User, Long> {
+       @Transactional(readOnly = true)
+       User findByUsername(String username);
+
+       @Transactional
+       User save(User user);
+   }
+   ```
+
+5. **Configure o Bean do Roteamento:**
+
+   No seu arquivo de configuração do Spring, configure o bean do roteamento de leitura/escrita:
+
+   ```java
+   @Bean
+   public DataSource routingDataSource() {
+       RoutingDataSource routingDataSource = new RoutingDataSource();
+       Map<Object, Object> dataSourceMap = new HashMap<>();
+       dataSourceMap.put("write", writeDataSource());
+       dataSourceMap.put("read", readDataSource());
+
+       routingDataSource.setTargetDataSources(dataSourceMap);
+       routingDataSource.setDefaultTargetDataSource(writeDataSource());
+
+       return routingDataSource;
+   }
+   ```
+
+6. **Configure o JPA:**
+
+   Configure o JPA para usar o `routingDataSource`:
+
+   ```java
+   @Bean
+   public LocalContainerEntityManagerFactoryBean entityManagerFactory(
+           EntityManagerFactoryBuilder builder,
+           @Qualifier("routingDataSource") DataSource dataSource) {
+       return builder
+               .dataSource(dataSource)
+               .packages("com.example.domain") // Pacote das suas entidades
+               .persistenceUnit("myapp")
+               .build();
+   }
+   ```
+
+7. **Defina um AOP Interceptor (Opcional):**
+
+   Você pode usar um interceptor AOP para determinar o tipo de operação e definir o contexto do DataSource automaticamente com base nas anotações `@Transactional`.
+
+8. **Use os Métodos de Repositório em sua Lógica de Negócios:**
+
+   Agora você pode usar os métodos de repositório em sua lógica de negócios. A configuração cuidará automaticamente de usar a instância de leitura ou escrita apropriada com base na anotação `@Transactional` nos métodos.
+
+Com essa configuração, sua aplicação Spring Boot deverá rotear automaticamente as operações de leitura para a instância de leitura e as operações de escrita para a instância de escrita do RDS. Certifique-se de ajustar os detalhes de configuração para atender às suas necessidades específicas.
