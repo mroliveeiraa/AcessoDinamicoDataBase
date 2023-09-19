@@ -1,1 +1,7 @@
+Verificar se uso "cloud.aws.rds."  
+
+cloud.aws.rds.employee-db.readReplicaSupport=true
+
+
+
 https://stackoverflow.com/questions/62032148/spring-boot-and-aws-rds-read-replica
