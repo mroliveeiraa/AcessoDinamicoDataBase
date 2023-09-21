@@ -1,1 +1,19 @@
 VERIFICAR SE A REPLICA ESTA VAZIA. SE ELA ESTIVER VAZIA SIGINIFICA QUE A AWS NAO ESTA REPLICANDO OS DADOS PARA A DE LEITURA
+
+
+
+
+
+# Configurações para o DataSource
+spring.datasource.url=jdbc:mysql://your-rds-instance-url:3306/your-database
+spring.datasource.username=your-username
+spring.datasource.password=your-password
+spring.datasource.driver-class-name=com.mysql.cj.jdbc.Driver  # Substitua pelo driver JDBC apropriado
+
+# Configurações do Spring Cloud AWS
+cloud.aws.credentials.accessKey=your-access-key
+cloud.aws.credentials.secretKey=your-secret-key
+cloud.aws.region.static=your-aws-region
+
+# Configurações específicas para o RDS
+cloud.aws.rds.instanceName=your-rds-instance-name
