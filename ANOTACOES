@@ -17,3 +17,11 @@ cloud.aws.region.static=your-aws-region
 
 # Configurações específicas para o RDS
 cloud.aws.rds.instanceName=your-rds-instance-name
+
+
+
+
+# Configuração do DataSource para gravação (instância de gravação)
+spring.datasource.write.url=jdbc:mysql://XPTO0/nome_do_banco
+spring.datasource.write.username=seu_usuario_de_gravacao
+spring.datasource.write.password=${seu_secreto_de_gravacao}
