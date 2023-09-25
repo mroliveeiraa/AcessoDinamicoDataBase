@@ -17,36 +17,86 @@ O Spring AOP e o aspecto configurados anteriormente direcionarão as chamadas pa
 @EnableTransactionManagement
 public class DataSourceConfig {
 
-    @Bean
+   @Bean
     public DataSourceRoutingService dataSourceRoutingService() {
         return new DataSourceRoutingService();
     }
 
+    // Configuração da fonte de dados que será usada para leitura
     @Bean
-    public DataSource dataSource() {
-        Map<Object, Object> targetDataSources = new HashMap<>();
-        targetDataSources.put("read", readDataSource());
-        targetDataSources.put("write", writeDataSource());
-
-        DataSourceRoutingDataSource routingDataSource = new DataSourceRoutingDataSource();
-        routingDataSource.setTargetDataSources(targetDataSources);
-        routingDataSource.setDefaultTargetDataSource(writeDataSource());
-
-        return routingDataSource;
+    @Qualifier("readDataSource")
+    public DataSource readDataSource(
+            @Value("${spring.datasource.read.url}") String url,
+            @Value("${spring.datasource.read.username}") String username,
+            @Value("${spring.datasource.read.password}") String password) {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("org.postgresql.Driver"); // Driver JDBC específico para o PostgreSQL
+        dataSource.setUrl(url);
+        dataSource.setUsername(username);
+        dataSource.setPassword(password);
+        return dataSource;
     }
 
+    // Configuração da fonte de dados que será usada para gravação
     @Bean
-    public DataSource readDataSource() {
-        // Configurar sua fonte de dados de leitura aqui
+    @Qualifier("writeDataSource")
+    public DataSource writeDataSource(
+            @Value("${spring.datasource.write.url}") String url,
+            @Value("${spring.datasource.write.username}") String username,
+            @Value("${spring.datasource.write.password}") String password) {
+        DriverManagerDataSource dataSource = new DriverManagerDataSource();
+        dataSource.setDriverClassName("org.postgresql.Driver"); // Driver JDBC específico para o PostgreSQL
+        dataSource.setUrl(url);
+        dataSource.setUsername(username);
+        dataSource.setPassword(password);
+        return dataSource;
     }
 
+    // Configuração do EntityManagerFactory para a fonte de dados de leitura
     @Bean
-    public DataSource writeDataSource() {
-        // Configurar sua fonte de dados de gravação aqui
+    @Qualifier("readEntityManager")
+    public LocalContainerEntityManagerFactoryBean readEntityManagerFactory(
+            EntityManagerFactoryBuilder builder,
+            @Qualifier("readDataSource") DataSource dataSource,
+            JpaProperties jpaProperties) {
+        Map<String, String> readJpaProperties = new HashMap<>(jpaProperties.getProperties());
+
+        return builder
+                .dataSource(dataSource)
+                .packages("seu.pacote.de.entidades") // Substitua pelo pacote de suas entidades
+                .properties(readJpaProperties)
+                .persistenceUnit("readEntityManager")
+                .build();
     }
 
+    // Configuração do EntityManagerFactory para a fonte de dados de gravação
     @Bean
-    public PlatformTransactionManager transactionManager() {
-        return new DataSourceTransactionManager(dataSource());
+    @Qualifier("writeEntityManager")
+    public LocalContainerEntityManagerFactoryBean writeEntityManagerFactory(
+            EntityManagerFactoryBuilder builder,
+            @Qualifier("writeDataSource") DataSource dataSource,
+            JpaProperties jpaProperties) {
+        Map<String, String> writeJpaProperties = new HashMap<>(jpaProperties.getProperties());
+
+        return builder
+                .dataSource(dataSource)
+                .packages("seu.pacote.de.entidades") // Substitua pelo pacote de suas entidades
+                .properties(writeJpaProperties)
+                .persistenceUnit("writeEntityManager")
+                .build();
+    }
+
+    // Configuração do gerenciador de transações para a fonte de dados de leitura
+    @Bean
+    public PlatformTransactionManager readTransactionManager(
+            @Qualifier("readEntityManager") EntityManagerFactory entityManagerFactory) {
+        return new JpaTransactionManager(entityManagerFactory);
+    }
+
+    // Configuração do gerenciador de transações para a fonte de dados de gravação
+    @Bean
+    public PlatformTransactionManager writeTransactionManager(
+            @Qualifier("writeEntityManager") EntityManagerFactory entityManagerFactory) {
+        return new JpaTransactionManager(entityManagerFactory);
     }
 }
