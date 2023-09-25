@@ -4,6 +4,13 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+/*
+Neste exemplo, o aspecto DataSourceRoutingAspect intercepta chamadas de método anotadas com @Transactional. 
+Ele verifica se a anotação possui readOnly definido como true e, com base nisso, 
+chama dataSourceRoutingService para definir a fonte de dados apropriada (leitura ou gravação).
+ */
+
+
 @Aspect
 @Component
 public class DataSourceRoutingAspect {
