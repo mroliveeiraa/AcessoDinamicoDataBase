@@ -61,9 +61,14 @@ public class DataSourceConfig {
             JpaProperties jpaProperties) {
         Map<String, String> readJpaProperties = new HashMap<>(jpaProperties.getProperties());
 
+    String[] entityPackages = {
+        "seu.pacote.de.entidades1",
+        "seu.pacote.de.entidades2"
+    };
+       
         return builder
                 .dataSource(dataSource)
-                .packages("seu.pacote.de.entidades") // Substitua pelo pacote de suas entidades
+                .packages(entityPackages) // Substitua pelo pacote de suas entidades
                 .properties(readJpaProperties)
                 .persistenceUnit("readEntityManager")
                 .build();
