@@ -55,14 +55,12 @@ volumes:
 
 
 
-    version: "3.8"
+version: "3.8"
 
 services:
   postgres-master:
     container_name: cuca-catalogo-aprovacao_postgres_master
     image: docker-remotes.artifactory.prod.aws.cloud.1hf/postgres:14.0-alpine
-    networks:
-      - network1
     ports:
       - "5432:5432"
     environment:
@@ -73,14 +71,11 @@ services:
       - "./local/db/aprovacao.sql:/docker-entrypoint-initdb.d/aprovacao.sql"
       - "./local/db:/db-util"
     networks:
-      network1:
-        name: cuca-catalogo-aprovacao_network1
+      - cuca-catalogo-aprovacao_network1
 
   postgres-replica:
     container_name: cuca-catalogo-aprovacao_postgres_replica
     image: docker-remotes.artifactory.prod.aws.cloud.1hf/postgres:14.0-alpine
-    networks:
-      - network1
     depends_on:
       - postgres-master
     environment:
@@ -92,8 +87,11 @@ services:
     volumes:
       - "replica_data:/var/lib/postgresql/data"
     networks:
-      network1:
-        name: cuca-catalogo-aprovacao_network1
+      - cuca-catalogo-aprovacao_network1
+
+networks:
+  cuca-catalogo-aprovacao_network1:
+    name: cuca-catalogo-aprovacao_network1
 
 volumes:
   postgres:
