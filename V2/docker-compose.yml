@@ -54,3 +54,55 @@ Origem: conversa com o Bing, 06/10/2023
 (1) Create a postgres database within a docker-compose.yml file. https://stackoverflow.com/questions/75246059/create-a-postgres-database-within-a-docker-compose-yml-file.
 (2) Docker-Compose with PostgreSQL ready to use - GitHub. https://github.com/felipewom/docker-compose-postgres.
 (3) Initialize Postgres db in Docker Compose - Stack Overflow. https://stackoverflow.com/questions/56643961/initialize-postgres-db-in-docker-compose.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+version: '3.8'
+
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./data:/var/lib/postgresql/data
+
+  reader:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=256MB"]
+    depends_on:
+      - db
+
+  writer:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: mydb
+    command: ["postgres", "-c", "max_connections=200", "-c", "shared_buffers=256MB"]
+    depends_on:
+      - db
+
